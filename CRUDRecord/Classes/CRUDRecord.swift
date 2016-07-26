@@ -46,11 +46,16 @@ public enum CRUD {
         }
     }
     
-    class URLBuilder {
+    public class URLBuilder {
         
-        var pattern = "\\(([0-9a-zA-Z]+\\))" // Default patten that takes Swift interpolation \(propertyName)
+        public var pattern: String
         
-        func build(record: Record?, path: String) -> String {
+        // Default patten that takes Swift interpolation \(propertyName)
+        public init(pattern: String = "\\(([0-9a-zA-Z]+\\))") {
+            self.pattern = pattern
+        }
+        
+        public func build(record: Record?, path: String) -> String {
             var result = ""
             let regex = try? NSRegularExpression(pattern: self.pattern, options: NSRegularExpressionOptions.CaseInsensitive)
             let range = NSRange(location: 0, length: path.characters.count)
@@ -68,7 +73,11 @@ public enum CRUD {
                 }
             }
             result = replacedString
-            return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + result
+            if result.hasPrefix("/") {
+                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + result
+            } else {
+                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + result
+            }
         }
     }
     

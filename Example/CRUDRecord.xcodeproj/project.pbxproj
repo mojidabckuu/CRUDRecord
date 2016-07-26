@@ -10,6 +10,7 @@
 		607FACEC1AFB9204008FA782 /* Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACEB1AFB9204008FA782 /* Tests.swift */; };
 		6227E209D212E10A7188FBF8 /* Pods_CRUDRecord_Tests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7118A84C7D0F86AE012B1D8B /* Pods_CRUDRecord_Tests.framework */; };
 		F54FC1631D475BF00075313B /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54FC1621D475BF00075313B /* User.swift */; };
+		F54FC1651D47A1940075313B /* URLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54FC1641D47A1940075313B /* URLBuilderTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +24,7 @@
 		7E3E70A629AB5E4A457B2201 /* Pods-CRUDRecord_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CRUDRecord_Tests.release.xcconfig"; path = "Pods/Target Support Files/Pods-CRUDRecord_Tests/Pods-CRUDRecord_Tests.release.xcconfig"; sourceTree = "<group>"; };
 		C995BC01D670CAF32FBC7B6D /* Pods-CRUDRecord_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CRUDRecord_Tests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-CRUDRecord_Tests/Pods-CRUDRecord_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		F54FC1621D475BF00075313B /* User.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		F54FC1641D47A1940075313B /* URLBuilderTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = URLBuilderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +73,7 @@
 			children = (
 				607FACEB1AFB9204008FA782 /* Tests.swift */,
 				607FACE91AFB9204008FA782 /* Supporting Files */,
+				F54FC1641D47A1940075313B /* URLBuilderTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -231,6 +234,7 @@
 			files = (
 				F54FC1631D475BF00075313B /* User.swift in Sources */,
 				607FACEC1AFB9204008FA782 /* Tests.swift in Sources */,
+				F54FC1651D47A1940075313B /* URLBuilderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

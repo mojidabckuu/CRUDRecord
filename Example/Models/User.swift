@@ -9,7 +9,23 @@
 import Foundation
 import CRUDRecord
 import Alamofire
+import ApplicationSupport
 
 class User: CRUDRecord {
-    required init() {}    
+    
+    var id: String!
+    var username: String?
+    
+    required init() {}
+    
+    //MARK: -
+    
+    func setAttributes(attributes: JSONObject) {
+        self.id = attributes["id"] as! String
+        self.username = attributes["username"] as? String
+    }
+    
+    func getAttributes() -> JSONObject {
+        return ["id" : self.id, "username" : self.username ?? NSNull()]
+    }
 }
