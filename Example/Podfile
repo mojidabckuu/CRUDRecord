@@ -1,0 +1,6 @@
+use_frameworks!
+target 'CRUDRecord_Tests' do
+  pod 'CRUDRecord', :path => '../'
+  
+  
+end
