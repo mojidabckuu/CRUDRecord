@@ -10,19 +10,6 @@ import Foundation
 import ApplicationSupport
 import Alamofire
 
-/* Descrives an item that can be canceled or resumed */
-public protocol Task {
-    func cancel()
-    func resume()
-}
-
-extension NSURLSessionDataTask: Task {}
-extension NSOperation: Task {
-    public func resume() {
-        self.start()
-    }
-}
-
 public enum CRUD {
     
     /* Default HTTP actions commonly used */
@@ -90,17 +77,7 @@ public enum CRUD {
 public protocol CRUDRecord: class, Record {
     
     associatedtype Entity = Self
-    
-    //    associatedtype ((CRUDResponse<Entity>) -> Void) = (CRUDResponse<Entity>) -> Void
-    
-    //        static func create(attributes: JSONObject, completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //
-    //    func create(completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //    func show(completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //    static func index(completion: ((CRUDResponse<[Entity]>) -> Void)?) -> Task
-    //    func patch(attributes: JSONObject, completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //    func update(completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //    func delete(completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
+    associatedtype RecordResponse = Response<Self, NSError>
     
     /* Base method that handles request.
      It initializes URL task to perform loading.
@@ -114,11 +91,6 @@ public protocol CRUDRecord: class, Record {
      - method - One of the HTTP methods
      @attributes - values to serialize. To send attachements u can pass CRUD.Attachement
      */
-    //    func request(action: String, attributes: JSONObject, options: [String: Any], completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //    func send(request: CRUDRequest<Entity>) -> Task
-    
-    //    static func request(action: String, attributes: JSONObject, options: [String: Any], completion: ((CRUDResponse<Entity>) -> Void)?) -> Task
-    //    static func send(request: CRUDRequest<Entity>) -> Task
 }
 
 extension CRUDRecord {
@@ -140,94 +112,92 @@ extension CRUD.Action {
     }
 }
 
-extension Request: Task {}
-
+// Extension that parses into models.
+// Duplicates code from original parse to JSON and initializes models on the save queue.
 extension Request {
-    
-    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: Response<[Model], NSError> -> Void) -> Self {
-        return response( queue: queue, responseSerializer: Request.JSONResponseSerializer(options: options), completionHandler: { (response) in
-            var models: [Model] = []
-            if let items = response.result.value as? JSONArray {
-                models = items.map({ (json) -> Model in
-                    let model = Model()
-                    model.setAttributes(json)
-                    return model
-                })
+    public static func JSONParseSerializer<Model: Record>(options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<Model, NSError> {
+        return ResponseSerializer { request, response, data, error in
+            let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
+            guard let error = jsonResponse.error else {
+                let model: Model = Model()
+                if let item = jsonResponse.value as? JSONObject {
+                    model.setAttributes(item)
+                }
+                return .Success(model)
             }
-            let parsedResponse = Response<[Model], NSError>(request: response.request, response: response.response, data: response.data, result: .Success(models), timeline: response.timeline)
-            completionHandler(parsedResponse)
-        })
+            return .Failure(error)
+        }
     }
     
-    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: Response<Model, NSError> -> Void) -> Self {
-        return response( queue: queue, responseSerializer: Request.JSONResponseSerializer(options: options), completionHandler: { (response) in
-            var model: Model! = nil
-            if let item = response.result.value as? JSONObject {
-                let model = Model()
-                model.setAttributes(item)
+    public static func JSONParseSerializer<Model: Record>(options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<[Model], NSError> {
+        return ResponseSerializer { request, response, data, error in
+            let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
+            guard let error = jsonResponse.error else {
+                var models: [Model] = []
+                if let items = jsonResponse as? JSONArray {
+                    models = items.map({ (json) -> Model in
+                        let model = Model()
+                        model.setAttributes(json)
+                        return model
+                    })
+                }
+                return .Success(models)
             }
-            let parsedResponse = Response<Model, NSError>(request: response.request, response: response.response, data: response.data, result: .Success(model), timeline: response.timeline)
-            completionHandler(parsedResponse)
-        })
+            return .Failure(error)
+        }
     }
-    
-    func parseJSON<Model: Initiable>(complationHandler: Response<Model, NSError> -> Void) -> Self {
-        return self
-    }
-    
 }
 
 typealias ModelCompletion = (Response<Record.Type, NSError> -> Void)
 typealias ModelsCompletion = (Response<Record.Type, NSError> -> Void)
 
+extension Request {
+    
+    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: Response<[Model], NSError> -> Void) -> Self {
+        return response(queue: queue, responseSerializer: Request.JSONParseSerializer(options: options), completionHandler: completionHandler)
+    }
+    
+    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: (Response<Model, NSError> -> Void)) -> Self {
+        return response(queue: queue, responseSerializer: Request.JSONParseSerializer(options: options), completionHandler: completionHandler)
+    }
+}
+
+
 extension CRUDRecord {
+
+    // MARK: - Base
+    
+    public func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> Request {
+        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + action.pattern)
+        return Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+    }
+    
+    public static func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> Request {
+        let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + action.pattern)
+        return Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+    }
     
     // MARK: - Predefined
     
-    static func create(attributes: JSONObject, completion: (Response<Self, NSError> -> Void)) -> Task {
-        let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + CRUD.Action.Create.pattern)
-        return request(.POST, URLString, parameters: attributes, encoding: .URL, headers: nil).parseJSON(completionHandler: completion)
+    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Create, attributes: attributes, options: options)
     }
-    
-    func create(completion: (Response<Self, NSError> -> Void)) -> Task {
-        return self.generic(.Create, attributes: self.getAttributes(CRUD.Action.Create.rawValue))
+    public func create(options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Create, attributes: self.getAttributes(CRUD.Action.Create.rawValue), options: options)
     }
-    
-    func show(completion: (Response<Self, NSError> -> Void)) -> Task {
-        let attributes = self.getAttributes(CRUD.Action.Show.rawValue)
-        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + CRUD.Action.Show.pattern)
-        return request(.POST, URLString, parameters: attributes, encoding: .URL, headers: nil).parseJSON(completionHandler: completion)
+    public func show(options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Show, attributes: self.getAttributes(CRUD.Action.Create.rawValue), options: options)
     }
-    
-    static func index(completion: (Response<Self, NSError> -> Void)) -> Task {
-        let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + CRUD.Action.Index.pattern)
-        return request(.POST, URLString, parameters: [:], encoding: .URL, headers: nil).parseJSON(completionHandler: completion)
+    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Index, attributes: [:], options: options)
     }
-    
-    func patch(attributes: JSONObject, completion: (Response<Self, NSError> -> Void)) -> Task {
-        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + CRUD.Action.Patch.pattern)
-        return request(.POST, URLString, parameters: attributes, encoding: .URL, headers: nil).parseJSON(completionHandler: completion)
+    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Patch, attributes: attributes, options: options)
     }
-    
-    func update(completion: (Response<Self, NSError> -> Void)) -> Task {
-        let attributes = self.getAttributes(CRUD.Action.Update.rawValue)
-        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + CRUD.Action.Update.pattern)
-        return request(.POST, URLString, parameters: attributes, encoding: .URL, headers: nil).parseJSON(completionHandler: completion)
+    public func update(options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Update, attributes: self.getAttributes(CRUD.Action.Update.rawValue), options: options)
     }
-    
-    func delete(completion: (Response<Self, NSError> -> Void)) -> Task {
-        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + CRUD.Action.Delete.pattern)
-        return request(.POST, URLString, parameters: [:], encoding: .URL, headers: nil).parseJSON(completionHandler: completion)
+    public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
+        return self.request(.Delete, attributes: self.getAttributes(CRUD.Action.Delete.rawValue), options: options)
     }
-    
-    func generic(action: CRUD.Action, attributes: [String: Any] = [:]) -> Request {
-        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + action.pattern)
-        return request(.POST, URLString, parameters: [:], encoding: .URL, headers: nil)
-    }
-    
-    static func generic(action: CRUD.Action, attributes: [String: Any] = [:]) -> Request {
-        let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + action.pattern)
-        return request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
-    }
-    
 }
