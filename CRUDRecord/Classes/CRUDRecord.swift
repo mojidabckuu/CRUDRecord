@@ -21,9 +21,9 @@ public enum CRUD {
         case Update = "update"
         case Delete = "delete"
         
-        var pattern: String {
+        public var pattern: String {
             switch self {
-            case .Show, .Update, .Patch, .Delete: return "\\(id)"
+            case .Show, .Update, .Patch, .Delete: return "/" + Configuration.defaultConfiguration.idPath
             default: return ""
             }
         }
@@ -37,6 +37,8 @@ public enum CRUD {
     struct Configuration {
         var baseURL: String?
         var prefix: String?
+        
+        var idPath = "\\(id)"
         
         static let defaultConfiguration = Configuration(baseURL: nil, prefix: nil)
         
@@ -102,10 +104,14 @@ public protocol CRUDRecord: class, Record {
      */
 }
 
-extension CRUDRecord {
+public extension CRUDRecord {
     public static var pathName: String {
         let components = self.modelName.componentsSeparatedByString(".").map({ $0.lowercaseString.pluralized })
         return components.dropLast().joinWithSeparator("/") + "/" + components.last!.lowercaseString
+    }
+    
+    public var `class`: Self.Type {
+        return self.dynamicType
     }
 }
 
