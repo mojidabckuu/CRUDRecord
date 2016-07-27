@@ -39,5 +39,5 @@ TODO: Add long description of the pod here.
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
   s.dependency 'ApplicationSupport'
-  s.dependency 'Alamofire', '~> 3.4'
+  s.dependency 'Alamofire', '~> 3.3'
 end
