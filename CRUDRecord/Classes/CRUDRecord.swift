@@ -10,6 +10,9 @@ import Foundation
 import ApplicationSupport
 import Alamofire
 
+public typealias JSONObject = RecordObject
+public typealias JSONArray = RecordArray
+
 public enum CRUD {
     
     /* Default HTTP actions commonly used */
@@ -34,13 +37,14 @@ public enum CRUD {
         var url: NSURL?
     }
     
-    struct Configuration {
-        var baseURL: String?
-        var prefix: String?
+    public struct Configuration {
+        public var baseURL: String?
+        public var prefix: String?
         
-        var idPath = "\\(id)"
+        public var traitRoot: Bool = true
+        public var idPath = "\\(id)"
         
-        static let defaultConfiguration = Configuration(baseURL: nil, prefix: nil)
+        public static var defaultConfiguration = Configuration(baseURL: nil, prefix: nil)
         
         init(baseURL: String?, prefix: String?) {
             self.baseURL = baseURL
@@ -76,9 +80,9 @@ public enum CRUD {
             }
             result = replacedString
             if result.hasPrefix("/") {
-                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + result
+                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + (CRUD.Configuration.defaultConfiguration.prefix ?? "") + result
             } else {
-                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + result
+                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + (CRUD.Configuration.defaultConfiguration.prefix ?? "") + "/" + result
             }
         }
     }
@@ -89,6 +93,7 @@ public protocol CRUDRecord: Record {
     
     associatedtype Entity = Self
     associatedtype RecordResponse = Response<Self, NSError>
+    associatedtype RecordsResponse = Response<[Self], NSError>
     
     /* Base method that handles request.
      It initializes URL task to perform loading.
@@ -127,8 +132,8 @@ extension CRUD.Action {
     }
 }
 
-extension CRUDRecord {
-
+public extension CRUDRecord {
+    
     // MARK: - Base
     
     public func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
@@ -140,7 +145,7 @@ extension CRUDRecord {
     
     public static func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + action.pattern)
-        let request = Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+        let request = Alamofire.request(action.method, URLString, parameters: attributes, encoding: .URL, headers: nil)
         let proxy = CRUD.Request.Proxy(request: request)
         return proxy
     }

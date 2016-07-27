@@ -428,7 +428,11 @@ extension CRUD.Request.Proxy {
             let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
             guard let error = jsonResponse.error else {
                 let model: Model = Model()
-                if let item = jsonResponse.value as? JSONObject {
+                if var item = jsonResponse.value as? JSONObject {
+                    if CRUD.Configuration.defaultConfiguration.traitRoot {
+                        let key = Model.resourceName
+                        item = (item[key] as? JSONObject) ?? item
+                    }
                     model.setAttributes(item)
                 }
                 return .Success(model)
@@ -448,6 +452,14 @@ extension CRUD.Request.Proxy {
                         model.setAttributes(json)
                         return model
                     })
+                } else if var item = jsonResponse as? JSONObject {
+                    if let items = (item[Model.resourceName] as? JSONArray) where CRUD.Configuration.defaultConfiguration.traitRoot {
+                        models = items.map({ (json) -> Model in
+                            let model = Model()
+                            model.setAttributes(json)
+                            return model
+                        })
+                    }
                 }
                 return .Success(models)
             }
