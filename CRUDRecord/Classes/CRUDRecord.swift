@@ -85,7 +85,7 @@ public enum CRUD {
     
 }
 
-public protocol CRUDRecord: class, Record {
+public protocol CRUDRecord: Record {
     
     associatedtype Entity = Self
     associatedtype RecordResponse = Response<Self, NSError>
@@ -127,92 +127,45 @@ extension CRUD.Action {
     }
 }
 
-// Extension that parses into models.
-// Duplicates code from original parse to JSON and initializes models on the save queue.
-extension Request {
-    public static func JSONParseSerializer<Model: Record>(options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<Model, NSError> {
-        return ResponseSerializer { request, response, data, error in
-            let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
-            guard let error = jsonResponse.error else {
-                let model: Model = Model()
-                if let item = jsonResponse.value as? JSONObject {
-                    model.setAttributes(item)
-                }
-                return .Success(model)
-            }
-            return .Failure(error)
-        }
-    }
-    
-    public static func JSONParseSerializer<Model: Record>(options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<[Model], NSError> {
-        return ResponseSerializer { request, response, data, error in
-            let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
-            guard let error = jsonResponse.error else {
-                var models: [Model] = []
-                if let items = jsonResponse as? JSONArray {
-                    models = items.map({ (json) -> Model in
-                        let model = Model()
-                        model.setAttributes(json)
-                        return model
-                    })
-                }
-                return .Success(models)
-            }
-            return .Failure(error)
-        }
-    }
-}
-
-typealias ModelCompletion = (Response<Record.Type, NSError> -> Void)
-typealias ModelsCompletion = (Response<Record.Type, NSError> -> Void)
-
-extension Request {
-    
-    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: Response<[Model], NSError> -> Void) -> Self {
-        return response(queue: queue, responseSerializer: Request.JSONParseSerializer(options: options), completionHandler: completionHandler)
-    }
-    
-    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: (Response<Model, NSError> -> Void)) -> Self {
-        return response(queue: queue, responseSerializer: Request.JSONParseSerializer(options: options), completionHandler: completionHandler)
-    }
-}
-
-
 extension CRUDRecord {
 
     // MARK: - Base
     
-    public func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> Request {
+    public func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + action.pattern)
-        return Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+        let request = Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+        let proxy = CRUD.Request.Proxy(request: request, model: self)
+        return proxy
     }
     
-    public static func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> Request {
+    public static func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + action.pattern)
-        return Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+        let request = Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
+        let proxy = CRUD.Request.Proxy(request: request)
+        return proxy
     }
     
     // MARK: - Predefined
     
-    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Create, attributes: attributes, options: options)
     }
-    public func create(options: [String: Any] = [:]) -> Alamofire.Request {
+    public func create(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Create, attributes: self.getAttributes(CRUD.Action.Create.rawValue), options: options)
     }
-    public func show(options: [String: Any] = [:]) -> Alamofire.Request {
+    public func show(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Show, attributes: self.getAttributes(CRUD.Action.Create.rawValue), options: options)
     }
-    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
+    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Index, attributes: [:], options: options)
     }
-    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Patch, attributes: attributes, options: options)
     }
-    public func update(options: [String: Any] = [:]) -> Alamofire.Request {
+    public func update(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Update, attributes: self.getAttributes(CRUD.Action.Update.rawValue), options: options)
     }
-    public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
+    public func delete(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Delete, attributes: self.getAttributes(CRUD.Action.Delete.rawValue), options: options)
     }
 }
