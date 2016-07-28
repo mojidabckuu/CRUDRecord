@@ -11,7 +11,7 @@ import ApplicationSupport
 import Alamofire
 
 public typealias JSONObject = RecordObject
-public typealias JSONArray = RecordArray
+public typealias JSONArray = RecordsArray
 
 public enum CRUD {
     
@@ -43,6 +43,8 @@ public enum CRUD {
         
         public var traitRoot: Bool = true
         public var idPath = "\\(id)"
+        
+        public var loggingEnabled = true
         
         public static var defaultConfiguration = Configuration(baseURL: nil, prefix: nil)
         
@@ -91,9 +93,9 @@ public enum CRUD {
 
 public protocol CRUDRecord: Record {
     
-    associatedtype Entity = Self
-    associatedtype RecordResponse = Response<Self, NSError>
-    associatedtype RecordsResponse = Response<[Self], NSError>
+    //    associatedtype Entity = Self
+    //    associatedtype RecordResponse = Response<Self, NSError>
+    //    associatedtype RecordsResponse = Response<[Self], NSError>
     
     /* Base method that handles request.
      It initializes URL task to perform loading.

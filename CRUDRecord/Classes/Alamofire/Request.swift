@@ -10,6 +10,15 @@ import Foundation
 import Alamofire
 import ApplicationSupport
 
+extension Alamofire.Request {
+    public func debugLog() -> Self {
+        #if DEBUG
+            debugPrint(self)
+        #endif
+        return self
+    }
+}
+
 public extension CRUD {
     public class Request {
         public class Proxy {
@@ -426,6 +435,9 @@ extension CRUD.Request.Proxy {
     public static func JSONParseSerializer<Model: Record>(model: Model? = nil, options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<Model, NSError> {
         return ResponseSerializer { request, response, data, error in
             let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
+            if CRUD.Configuration.defaultConfiguration.loggingEnabled {
+                print("JSON: \(jsonResponse)")
+            }
             guard let error = jsonResponse.error else {
                 let model: Model = Model()
                 if var item = jsonResponse.value as? JSONObject {
@@ -444,16 +456,19 @@ extension CRUD.Request.Proxy {
     public static func JSONParseSerializer<Model: Record>(options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<[Model], NSError> {
         return ResponseSerializer { request, response, data, error in
             let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
+            if CRUD.Configuration.defaultConfiguration.loggingEnabled {
+                print("JSON: \(jsonResponse)")
+            }
             guard let error = jsonResponse.error else {
                 var models: [Model] = []
-                if let items = jsonResponse as? JSONArray {
+                if let items = jsonResponse as? [[String: AnyObject]] {
                     models = items.map({ (json) -> Model in
                         let model = Model()
                         model.setAttributes(json)
                         return model
                     })
-                } else if var item = jsonResponse as? JSONObject {
-                    if let items = (item[Model.resourceName] as? JSONArray) where CRUD.Configuration.defaultConfiguration.traitRoot {
+                } else if var item = jsonResponse as? [String: AnyObject] {
+                    if let items = (item[Model.resourceName] as? [[String: AnyObject]]) where CRUD.Configuration.defaultConfiguration.traitRoot {
                         models = items.map({ (json) -> Model in
                             let model = Model()
                             model.setAttributes(json)
@@ -474,11 +489,17 @@ typealias ModelsCompletion = (Response<Record.Type, NSError> -> Void)
 extension CRUD.Request.Proxy {
     
     public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: Response<[Model], NSError> -> Void) -> Self {
+        if CRUD.Configuration.defaultConfiguration.loggingEnabled {
+            self.ALRequest.debugLog()
+        }
         self.ALRequest.response(queue: queue, responseSerializer: CRUD.Request.Proxy.JSONParseSerializer(options: options), completionHandler: completionHandler)
         return self
     }
     
     public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: (Response<Model, NSError> -> Void)) -> Self {
+        if CRUD.Configuration.defaultConfiguration.loggingEnabled {
+            self.ALRequest.debugLog()
+        }
         if let r = self.model as? Model {
             self.ALRequest.response(queue: queue, responseSerializer: CRUD.Request.Proxy.JSONParseSerializer(r, options: options), completionHandler: completionHandler)
         } else {
