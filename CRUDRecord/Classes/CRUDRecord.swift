@@ -13,6 +13,11 @@ import Alamofire
 public typealias JSONObject = RecordObject
 public typealias JSONArray = RecordsArray
 
+public protocol RecordResponse {
+    public typealias RecordResponse: Alamofire.Response<Self, NSError>
+    public typealias RecordsResponse: Alamofire.Response<[Self], NSError>
+}
+
 public enum CRUD {
     
     /* Default HTTP actions commonly used */
@@ -92,10 +97,6 @@ public enum CRUD {
 }
 
 public protocol CRUDRecord: Record {
-    
-    //    associatedtype Entity = Self
-    //    associatedtype RecordResponse = Response<Self, NSError>
-    //    associatedtype RecordsResponse = Response<[Self], NSError>
     
     /* Base method that handles request.
      It initializes URL task to perform loading.
