@@ -442,10 +442,10 @@ extension CRUD.Request.Proxy {
                 let model: Model = Model()
                 if var item = jsonResponse.value as? JSONObject {
                     if CRUD.Configuration.defaultConfiguration.traitRoot {
-                        let key = Model.resourceName
+                        let key = Model.resourceName.lowercaseString
                         item = (item[key] as? JSONObject) ?? item
                     }
-                    model.setAttributes(item)
+                    model.setAttributes(item.pure)
                 }
                 return .Success(model)
             }
@@ -461,17 +461,18 @@ extension CRUD.Request.Proxy {
             }
             guard let error = jsonResponse.error else {
                 var models: [Model] = []
-                if let items = jsonResponse as? [[String: AnyObject]] {
+                if let items = jsonResponse.value as? JSONArray {
                     models = items.map({ (json) -> Model in
                         let model = Model()
-                        model.setAttributes(json)
+                        model.setAttributes(json.pure)
                         return model
                     })
-                } else if var item = jsonResponse as? [String: AnyObject] {
-                    if let items = (item[Model.resourceName] as? [[String: AnyObject]]) where CRUD.Configuration.defaultConfiguration.traitRoot {
+                } else if var item = jsonResponse.value as? JSONObject {
+                    let key = Model.resourceName.pluralized.lowercaseString
+                    if let items = (item[key] as? JSONArray) where CRUD.Configuration.defaultConfiguration.traitRoot {
                         models = items.map({ (json) -> Model in
                             let model = Model()
-                            model.setAttributes(json)
+                            model.setAttributes(json.pure)
                             return model
                         })
                     }

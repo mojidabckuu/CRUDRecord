@@ -10,12 +10,38 @@ import Foundation
 import ApplicationSupport
 import Alamofire
 
-public typealias JSONObject = RecordObject
-public typealias JSONArray = RecordsArray
+public typealias JSONObject = [String: AnyObject]
+public typealias JSONArray = [JSONObject]
 
 public protocol RecordResponse {
-    public typealias RecordResponse: Alamofire.Response<Self, NSError>
-    public typealias RecordsResponse: Alamofire.Response<[Self], NSError>
+    associatedtype RecordResponse = Alamofire.Response<Self, NSError>
+    associatedtype RecordsResponse = Alamofire.Response<[Self], NSError>
+}
+
+public extension Dictionary where Key: StringLiteralConvertible, Value: Any {
+    var pure: [Key: AnyObject] {
+        var pure: [Key: AnyObject] = [:]
+        for (k, v) in self {
+            if let value = v as? AnyObject {
+                pure[k] = value
+            } else if let value = v as? RecordObject {
+                pure[k] = value.pure
+            } else if let value = v as? RecordsArray {
+                pure[k] = value.map({ $0.pure })
+            }
+        }
+        return pure
+    }
+}
+
+public extension Dictionary where Key: StringLiteralConvertible, Value: AnyObject {
+    var pure: [Key: Any] {
+        var pure: [Key: Any] = [:]
+        for (k, v) in self {
+            pure[k] = v
+        }
+        return pure
+    }
 }
 
 public enum CRUD {
@@ -98,6 +124,10 @@ public enum CRUD {
 
 public protocol CRUDRecord: Record {
     
+    //    associatedtype Entity = Self
+    //    associatedtype RecordResponse = Response<Self, NSError>
+    //    associatedtype RecordsResponse = Response<[Self], NSError>
+    
     /* Base method that handles request.
      It initializes URL task to perform loading.
      @options - way how to configure the flow
@@ -139,16 +169,16 @@ public extension CRUDRecord {
     
     // MARK: - Base
     
-    public func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        let URLString = CRUD.URLBuilder().build(self, path: self.dynamicType.pathName + action.pattern)
+    public func request(action: CRUD.Action, attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
+        let URLString = CRUD.URLBuilder().build(self, path: (options["path"] as? String) ?? (self.dynamicType.pathName + action.pattern))
         let request = Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
         let proxy = CRUD.Request.Proxy(request: request, model: self)
         return proxy
     }
     
-    public static func request(action: CRUD.Action, attributes: [String: AnyObject] = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        let URLString = CRUD.URLBuilder().build(nil, path: self.pathName + action.pattern)
-        let request = Alamofire.request(action.method, URLString, parameters: attributes, encoding: .URL, headers: nil)
+    public static func request(action: CRUD.Action, attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
+        let URLString = CRUD.URLBuilder().build(nil, path: (options["path"] as? String) ?? (self.pathName + action.pattern))
+        let request = Alamofire.request(action.method, URLString, parameters: attributes.pure, encoding: .URL, headers: nil)
         let proxy = CRUD.Request.Proxy(request: request)
         return proxy
     }
@@ -159,21 +189,24 @@ public extension CRUDRecord {
         return self.request(.Create, attributes: attributes, options: options)
     }
     public func create(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Create, attributes: self.getAttributes(CRUD.Action.Create.rawValue), options: options)
+        return self.request(.Create, attributes: self.getAttributes(CRUD.Action.Create.rawValue).pure, options: options)
     }
     public func show(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Show, attributes: self.getAttributes(CRUD.Action.Create.rawValue), options: options)
+        return self.request(.Show, attributes: self.getAttributes(CRUD.Action.Create.rawValue).pure, options: options)
     }
     public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Index, attributes: [:], options: options)
+    }
+    public func index(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
+        return self.request(.Show, attributes: [:], options: options)
     }
     public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> CRUD.Request.Proxy {
         return self.request(.Patch, attributes: attributes, options: options)
     }
     public func update(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Update, attributes: self.getAttributes(CRUD.Action.Update.rawValue), options: options)
+        return self.request(.Update, attributes: self.getAttributes(CRUD.Action.Update.rawValue).pure, options: options)
     }
     public func delete(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Delete, attributes: self.getAttributes(CRUD.Action.Delete.rawValue), options: options)
+        return self.request(.Delete, attributes: self.getAttributes(CRUD.Action.Delete.rawValue).pure, options: options)
     }
 }
