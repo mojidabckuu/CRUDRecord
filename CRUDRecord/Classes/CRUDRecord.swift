@@ -44,24 +44,71 @@ public extension Dictionary where Key: StringLiteralConvertible, Value: AnyObjec
     }
 }
 
-public enum CRUD {
+public typealias CRUDRouter = Router
+public class Router: URLRequestConvertible {
     
-    /* Default HTTP actions commonly used */
-    public enum Action: String {
-        case Create = "create"
-        case Show = "show"
-        case Index = "index"
-        case Patch = "patch"
-        case Update = "update"
-        case Delete = "delete"
-        
-        public var pattern: String {
-            switch self {
-            case .Show, .Update, .Patch, .Delete: return "/" + Configuration.defaultConfiguration.idPath
-            default: return ""
-            }
+    var options: RecordObject = [:]
+    var method: Alamofire.Method = .GET
+    var query: RecordObject = [:]
+    var parameters: RecordObject = [:]
+    var encoding: Alamofire.ParameterEncoding = .URL
+    var model: Record?
+    var modelType: Record.Type
+    
+    public init(_ model: Record, options: RecordObject = [:]) {
+        self.model = model
+        self.modelType = model.dynamicType
+        self.options = options
+    }
+    
+    public init(_ modelType: Record.Type, options: RecordObject = [:]) {
+        self.modelType = modelType
+        self.options = options
+    }
+    
+    public func method(_ method: Alamofire.Method) -> Router {
+        self.method = method
+        return self
+    }
+    
+    public func query(_ parameters: RecordObject) -> Router {
+        self.query = parameters
+        return self
+    }
+    
+    public func parameters(_ parameters: RecordObject) -> Router {
+        self.parameters = parameters
+        return self
+    }
+    
+    public func encoding(_ encoding: Alamofire.ParameterEncoding) -> Router {
+        self.encoding = encoding
+        return self
+    }
+    
+    public var pattern: String {
+        switch self.method {
+        case .GET, .PUT, .PATCH, .DELETE: return CRUD.Configuration.defaultConfiguration.idPath
+        default: return ""
         }
     }
+    
+    public var path: String {
+        return (options["path"] as? String) ?? self.modelType.resourcesName + "/" + self.pattern
+    }
+    
+    public var URLRequest: NSMutableURLRequest {
+        let URL = NSURL(string: CRUD.Configuration.defaultConfiguration.baseURL!)!
+        let URLString = CRUD.URLBuilder().build(self.model, path: self.path)
+        var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix).URLByAppendingPathComponent(URLString))
+        mutableURLRequest.HTTPMethod = method.rawValue
+        mutableURLRequest = Alamofire.ParameterEncoding.URLEncodedInURL.encode(mutableURLRequest, parameters: query.pure).0
+        mutableURLRequest = self.encoding.encode(mutableURLRequest, parameters: query.pure).0
+        return mutableURLRequest
+    }
+}
+
+public enum CRUD {
     
     public struct Attachement {
         var data: NSData?
@@ -70,16 +117,16 @@ public enum CRUD {
     
     public struct Configuration {
         public var baseURL: String?
-        public var prefix: String?
+        public var prefix: String = ""
         
         public var traitRoot: Bool = true
         public var idPath = "\\(id)"
         
         public var loggingEnabled = true
         
-        public static var defaultConfiguration = Configuration(baseURL: nil, prefix: nil)
+        public static var defaultConfiguration = Configuration(baseURL: nil)
         
-        init(baseURL: String?, prefix: String?) {
+        init(baseURL: String?, prefix: String = "") {
             self.baseURL = baseURL
             self.prefix = prefix
         }
@@ -112,11 +159,7 @@ public enum CRUD {
                 }
             }
             result = replacedString
-            if result.hasPrefix("/") {
-                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + (CRUD.Configuration.defaultConfiguration.prefix ?? "") + result
-            } else {
-                return (CRUD.Configuration.defaultConfiguration.baseURL ?? "") + "/" + (CRUD.Configuration.defaultConfiguration.prefix ?? "") + "/" + result
-            }
+            return result
         }
     }
     
@@ -153,60 +196,31 @@ public extension CRUDRecord {
     }
 }
 
-extension CRUD.Action {
-    var method: Alamofire.Method {
-        switch self {
-        case .Show, .Index: return Method.GET
-        case .Create: return Method.POST
-        case .Delete: return Method.DELETE
-        case .Patch: return Method.PATCH
-        case .Update: return Method.PUT
-        }
-    }
-}
-
 public extension CRUDRecord {
-    
-    // MARK: - Base
-    
-    public func request(action: CRUD.Action, attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        let URLString = CRUD.URLBuilder().build(self, path: (options["path"] as? String) ?? (self.dynamicType.pathName + action.pattern))
-        let request = Alamofire.request(action.method, URLString, parameters: [:], encoding: .URL, headers: nil)
-        let proxy = CRUD.Request.Proxy(request: request, model: self)
-        return proxy
-    }
-    
-    public static func request(action: CRUD.Action, attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        let URLString = CRUD.URLBuilder().build(nil, path: (options["path"] as? String) ?? (self.pathName + action.pattern))
-        let request = Alamofire.request(action.method, URLString, parameters: attributes.pure, encoding: .URL, headers: nil)
-        let proxy = CRUD.Request.Proxy(request: request)
-        return proxy
-    }
-    
     // MARK: - Predefined
     
-    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Create, attributes: attributes, options: options)
+    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.POST))
     }
-    public func create(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Create, attributes: self.getAttributes(CRUD.Action.Create.rawValue).pure, options: options)
+    public func create(options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(Self.self, options: options).parameters(self.getAttributes().pure).method(.POST))
     }
-    public func show(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Show, attributes: self.getAttributes(CRUD.Action.Create.rawValue).pure, options: options)
+    public func show(options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(self, options: options).parameters(self.getAttributes().pure).method(.GET))
     }
-    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Index, attributes: [:], options: options)
+    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(Self.self, options: options).query(attributes.pure).method(.GET))
     }
-    public func index(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Show, attributes: [:], options: options)
+    public func index(options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(self, options: options).method(.GET))
     }
-    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Patch, attributes: attributes, options: options)
+    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(self, options: options).parameters(attributes.pure).method(.PATCH))
     }
-    public func update(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Update, attributes: self.getAttributes(CRUD.Action.Update.rawValue).pure, options: options)
+    public func update(options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(self, options: options).parameters(self.getAttributes().pure).method(.PUT))
     }
-    public func delete(options: [String: Any] = [:]) -> CRUD.Request.Proxy {
-        return self.request(.Delete, attributes: self.getAttributes(CRUD.Action.Delete.rawValue).pure, options: options)
+    public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
+        return Alamofire.request(Router(self, options: options).query(self.getAttributes().pure).method(.DELETE))
     }
 }
