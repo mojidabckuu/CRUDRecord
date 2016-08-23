@@ -18,32 +18,6 @@ public protocol RecordResponse {
     associatedtype RecordsResponse = Alamofire.Response<[Self], NSError>
 }
 
-public extension Dictionary where Key: StringLiteralConvertible, Value: Any {
-    var pure: [Key: AnyObject] {
-        var pure: [Key: AnyObject] = [:]
-        for (k, v) in self {
-            if let value = v as? AnyObject {
-                pure[k] = value
-            } else if let value = v as? RecordObject {
-                pure[k] = value.pure
-            } else if let value = v as? RecordsArray {
-                pure[k] = value.map({ $0.pure })
-            }
-        }
-        return pure
-    }
-}
-
-public extension Dictionary where Key: StringLiteralConvertible, Value: AnyObject {
-    var pure: [Key: Any] {
-        var pure: [Key: Any] = [:]
-        for (k, v) in self {
-            pure[k] = v
-        }
-        return pure
-    }
-}
-
 public typealias CRUDRouter = Router
 public class Router: URLRequestConvertible {
     
@@ -103,7 +77,7 @@ public class Router: URLRequestConvertible {
         var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix).URLByAppendingPathComponent(URLString))
         mutableURLRequest.HTTPMethod = method.rawValue
         mutableURLRequest = Alamofire.ParameterEncoding.URLEncodedInURL.encode(mutableURLRequest, parameters: query.pure).0
-        mutableURLRequest = self.encoding.encode(mutableURLRequest, parameters: query.pure).0
+        mutableURLRequest = self.encoding.encode(mutableURLRequest, parameters: parameters.pure).0
         return mutableURLRequest
     }
 }
@@ -145,7 +119,7 @@ public enum CRUD {
             var result = ""
             let regex = try? NSRegularExpression(pattern: self.pattern, options: NSRegularExpressionOptions.CaseInsensitive)
             let range = NSRange(location: 0, length: path.characters.count)
-            let attributes = record?.getAttributes() ?? [:]
+            let attributes = record?.attributes ?? [:]
             var replacedString = String(path)
             if let matches = regex?.matchesInString(path, options: NSMatchingOptions.ReportProgress, range: range) {
                 for match in matches {
@@ -203,10 +177,10 @@ public extension CRUDRecord {
         return Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.POST))
     }
     public func create(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Alamofire.request(Router(Self.self, options: options).parameters(self.getAttributes().pure).method(.POST))
+        return Alamofire.request(Router(Self.self, options: options).parameters(self.attributes.pure).method(.POST))
     }
     public func show(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Alamofire.request(Router(self, options: options).parameters(self.getAttributes().pure).method(.GET))
+        return Alamofire.request(Router(self, options: options).parameters(self.attributes.pure).method(.GET))
     }
     public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
         return Alamofire.request(Router(Self.self, options: options).query(attributes.pure).method(.GET))
@@ -218,9 +192,9 @@ public extension CRUDRecord {
         return Alamofire.request(Router(self, options: options).parameters(attributes.pure).method(.PATCH))
     }
     public func update(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Alamofire.request(Router(self, options: options).parameters(self.getAttributes().pure).method(.PUT))
+        return Alamofire.request(Router(self, options: options).parameters(self.attributes.pure).method(.PUT))
     }
     public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Alamofire.request(Router(self, options: options).query(self.getAttributes().pure).method(.DELETE))
+        return Alamofire.request(Router(self, options: options).query(self.attributes.pure).method(.DELETE))
     }
 }
