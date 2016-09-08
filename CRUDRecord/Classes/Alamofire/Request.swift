@@ -104,7 +104,7 @@ extension Alamofire.Request {
         return returnError
     }
     
-    public static func ObjectMapperSerializer<T: Record>(keyPath: String?, mapToObject object: T? = nil, context: MapContext? = nil) -> ResponseSerializer<T, NSError> {
+    public static func ObjectMapperSerializer<T: Record>(keyPath: String?, mapToObject object: T? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil) -> ResponseSerializer<T, NSError> {
         return ResponseSerializer { request, response, data, error in
             guard error == nil else {
                 return .Failure(error!)
@@ -135,9 +135,9 @@ extension Alamofire.Request {
             }
             
             if let object = object {
-                Mapper<T>().map(JSONToMap, toObject: object)
+                Mapper<T>(mapper: mapper).map(JSONToMap, toObject: object)
                 return .Success(object)
-            } else if let parsedObject = Mapper<T>(context: context).map(JSONToMap){
+            } else if let parsedObject = Mapper<T>(context: context, mapper: mapper).map(JSONToMap){
                 return .Success(parsedObject)
             }
             
@@ -158,12 +158,12 @@ extension Alamofire.Request {
      - returns: The request.
      */
     
-    public func responseObject<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, mapToObject object: T? = nil, context: MapContext? = nil, completionHandler: Response<T, NSError> -> Void) -> Self {
+    public func responseObject<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, mapToObject object: T? = nil, mapper: MapOf<T>? = nil, context: MapContext? = nil, completionHandler: Response<T, NSError> -> Void) -> Self {
         
         return response(queue: queue, responseSerializer: Alamofire.Request.ObjectMapperSerializer(keyPath, mapToObject: object, context: context), completionHandler: completionHandler)
     }
     
-    public static func ObjectMapperArraySerializer<T: Record>(keyPath: String?, context: MapContext? = nil) -> ResponseSerializer<[T], NSError> {
+    public static func ObjectMapperArraySerializer<T: Record>(keyPath: String?, context: MapContext? = nil, mapper: MapOf<T>? = nil) -> ResponseSerializer<[T], NSError> {
         return ResponseSerializer { request, response, data, error in
             guard error == nil else {
                 return .Failure(error!)
@@ -195,7 +195,7 @@ extension Alamofire.Request {
                 }
             }
             
-            if let parsedObject = Mapper<T>(context: context).mapArray(OriginalJSONToMap){
+            if let parsedObject = Mapper<T>(context: context, mapper: mapper).mapArray(OriginalJSONToMap){
                 return .Success(parsedObject)
             }
             
@@ -218,10 +218,12 @@ extension Alamofire.Request {
         return response(queue: queue, responseSerializer: Request.ObjectMapperArraySerializer(keyPath, context: context), completionHandler: completionHandler)
     }
     
+    // Map utils
     public func map<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, context: MapContext? = nil, completionHandler: Response<[T], NSError> -> Void) -> Self {
         return self.responseArray(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
     }
-    public func map<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, context: MapContext? = nil, completionHandler: Response<T, NSError> -> Void) -> Self {
+    
+    public func map<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil, completionHandler: Response<T, NSError> -> Void) -> Self {
         return self.responseObject(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
     }
     public func map<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, context: MapContext? = nil, object: T, completionHandler: Response<T, NSError> -> Void) -> Self {

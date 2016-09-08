@@ -9,6 +9,7 @@
 import Foundation
 import ApplicationSupport
 import Alamofire
+import ObjectMapper
 import SwiftyBeaver
 
 let CRUDLog = SwiftyBeaver.self
@@ -139,11 +140,13 @@ public enum CRUD {
             return result
         }
     }
-    
 }
+
+
 
 public protocol CRUDRecord: Record {
     
+//    static var Router: CRRouter { get }
     //    associatedtype Entity = Self
     //    associatedtype RecordResponse = Response<Self, NSError>
     //    associatedtype RecordsResponse = Response<[Self], NSError>
@@ -160,6 +163,100 @@ public protocol CRUDRecord: Record {
      - method - One of the HTTP methods
      @attributes - values to serialize. To send attachements u can pass CRUD.Attachement
      */
+}
+
+public class CRRouter<T: Record>: URLRequestConvertible {
+    var actions: [String: CRAction<T>] = [:]
+
+    func create() {}
+    func update() {}
+    func patch() {}
+    func delete() {}
+    func index() {}
+    func show() {}
+    
+    public init(block: (CRRouter -> Void)? = nil) {
+        block?(self)
+    }
+    
+    public var URLRequest: NSMutableURLRequest {
+        return NSMutableURLRequest()
+    }
+}
+
+public class CRAction<T: Record> {
+    let name: String
+    internal var mapper: MapOf<T>
+    internal var _baseURL: String?
+    internal var _options: RecordObject = [:]
+    internal var _method: Alamofire.Method = .GET
+    internal var _query: RecordObject = [:]
+    internal var _encoding: Alamofire.ParameterEncoding = .URL
+    
+    public init(name: String, mapper: MapOf<T>) {
+        self.mapper = mapper
+        self.name = name
+    }
+    
+    public func method(_ method: Alamofire.Method) -> CRAction {
+        _method = method
+        return self
+    }
+    
+    public func query(_ parameters: RecordObject) -> CRAction {
+        _query = parameters
+        return self
+    }
+    
+    public func encoding(_ encoding: Alamofire.ParameterEncoding) -> CRAction {
+        _encoding = encoding
+        return self
+    }
+    
+    public var pattern: String {
+        switch _method {
+        case .GET, .PUT, .PATCH, .DELETE: return CRUD.Configuration.defaultConfiguration.idPath
+        default: return ""
+        }
+    }
+    
+    public var path: String {
+        return (_options["path"] as? String) ?? T.resourcesName + "/" + self.pattern
+    }
+    
+    public var URLRequest: NSMutableURLRequest {
+        let URL = NSURL(string: CRUD.Configuration.defaultConfiguration.baseURL!)!
+//        let URLString = CRUD.URLBuilder().build(self.model, path: self.path)
+        let URLString = ""
+        var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix).URLByAppendingPathComponent(URLString))
+        mutableURLRequest.HTTPMethod = _method.rawValue
+        mutableURLRequest = Alamofire.ParameterEncoding.URLEncodedInURL.encode(mutableURLRequest, parameters: _query.pure).0
+        let map = Map(mappingType: .ToJSON, JSONDictionary: [:])
+        self.mapper.mapToMap(map)
+        mutableURLRequest = _encoding.encode(mutableURLRequest, parameters: map.JSONDictionary.pure).0
+        return mutableURLRequest
+    }
+    
+}
+
+func << <T>(router: CRRouter<T>, action: CRAction<T>) {
+    router.actions[action.name] = action
+}
+
+class Post: CRUDRecord {
+    static let Router = CRRouter { (router) in
+        router << CRAction(name: "index", mapper: MapOf<Post>(fromJSON: { (map, post) in
+            print(#file)
+        }, toJSON: { (map, post) in
+            print(#file)
+        })).method(.POST)
+    }
+    var id: Int!
+    
+    var timeline = ApplicationSupport.Timeline()
+    required init() {}
+    
+    func mapping(map: Map) {}
 }
 
 public extension CRUDRecord {
@@ -179,7 +276,7 @@ public extension CRUDRecord {
         return request
     }
     // MARK: - Predefined
-    
+
     public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
         return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.POST)))
     }
@@ -204,4 +301,29 @@ public extension CRUDRecord {
     public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
         return Self.debug(Alamofire.request(Router(self, options: options).query(self.attributes.pure).method(.DELETE)))
     }
+    
+//    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.POST)))
+//    }
+//    public func create(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(self.attributes.pure).method(.POST)))
+//    }
+//    public func show(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes.pure).method(.GET)))
+//    }
+//    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(Self.self, options: options).query(attributes.pure).method(.GET)))
+//    }
+//    public func index(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).method(.GET)))
+//    }
+//    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).parameters(attributes.pure).method(.PATCH)))
+//    }
+//    public func update(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes.pure).method(.PUT)))
+//    }
+//    public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).query(self.attributes.pure).method(.DELETE)))
+//    }
 }
