@@ -11,6 +11,20 @@ import Alamofire
 import ApplicationSupport
 import ObjectMapper
 
+public extension MultipartFormData {
+    func appendBodyPart(value: String, name: String) {
+        if let data = value.dataUsingEncoding(NSUTF8StringEncoding) {
+            self.appendBodyPart(data: data, name: name)
+        }
+    }
+    
+    func appendBodyPart<T: RawRepresentable>(value: T, name: String) {
+        if let value = value.rawValue as? String {
+            self.appendBodyPart(value, name: name)
+        }
+    }
+}
+
 extension Alamofire.Request {
     public func debugLog() -> Self {
         #if DEBUG
@@ -132,6 +146,7 @@ extension Alamofire.Request {
                     OriginalJSONToMap = JSONParser(string).parse() as? [String: Any]
                 }
             }
+            CRUDLog.info("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
             
             let JSONToMap: Any?
             if var keyPath = keyPath {
@@ -214,6 +229,7 @@ extension Alamofire.Request {
                     }
                 }
             }
+            CRUDLog.info("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
             
             if let parsedObject = Mapper<T>(context: context, mapper: mapper).mapArray(OriginalJSONToMap){
                 return .Success(parsedObject)
