@@ -13,7 +13,7 @@ import ObjectMapper
 
 public extension MultipartFormData {
     func appendBodyPart(value: String, name: String) {
-        if let data = value.dataUsingEncoding(NSUTF8StringEncoding) {
+        if let data = value.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false) {
             self.appendBodyPart(data: data, name: name)
         }
     }
