@@ -107,6 +107,16 @@ extension Alamofire.Request {
     public static func ObjectMapperSerializer<T: Record>(keyPath: String?, mapToObject object: T? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil) -> ResponseSerializer<T, NSError> {
         return ResponseSerializer { request, response, data, error in
             guard error == nil else {
+                if let data = data, let string = String(data: data, encoding: NSUTF8StringEncoding) {
+                    var json = JSONParser(string).parse() as? [String: Any]
+                    if let errors = json?["errors"] as? [String: Any] where !errors.isEmpty {
+                        if let key = errors.keys.first, errorInfo = errors[key] as? [[String: Any]], message = errorInfo.first?["message"] as? String {
+                            let info = [NSLocalizedDescriptionKey: message]
+                            let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
+                            return .Failure(error)
+                        }
+                    }
+                }
                 return .Failure(error!)
             }
             
@@ -166,6 +176,16 @@ extension Alamofire.Request {
     public static func ObjectMapperArraySerializer<T: Record>(keyPath: String?, context: MapContext? = nil, mapper: MapOf<T>? = nil) -> ResponseSerializer<[T], NSError> {
         return ResponseSerializer { request, response, data, error in
             guard error == nil else {
+                if let data = data, let string = String(data: data, encoding: NSUTF8StringEncoding) {
+                    var json = JSONParser(string).parse() as? [String: Any]
+                    if let errors = json?["errors"] as? [String: Any] where !errors.isEmpty {
+                        if let key = errors.keys.first, errorInfo = errors[key] as? [[String: Any]], message = errorInfo.first?["message"] as? String {
+                            let info = [NSLocalizedDescriptionKey: message]
+                            let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
+                            return .Failure(error)
+                        }
+                    }
+                }
                 return .Failure(error!)
             }
             
