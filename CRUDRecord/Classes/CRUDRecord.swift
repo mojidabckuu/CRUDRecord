@@ -278,7 +278,7 @@ public extension CRUDRecord {
     // MARK: - Predefined
 
     public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes).method(.POST)).validate())
+        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.POST)).validate())
     }
     public func create(options: [String: Any] = [:]) -> Alamofire.Request {
         return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(self.attributes).method(.POST)).validate())
@@ -287,7 +287,7 @@ public extension CRUDRecord {
         return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes).method(.GET)).validate())
     }
     public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(Self.self, options: options).query(attributes).method(.GET)).validate())
+        return Self.debug(Alamofire.request(Router(Self.self, options: options).query(attributes.pure).method(.GET)).validate())
     }
     public func index(options: [String: Any] = [:]) -> Alamofire.Request {
         return Self.debug(Alamofire.request(Router(self, options: options).method(.GET)).validate())
