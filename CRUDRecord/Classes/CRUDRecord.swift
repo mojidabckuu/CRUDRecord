@@ -78,7 +78,7 @@ public class Router: URLRequestConvertible {
     public var URLRequest: NSMutableURLRequest {
         let URL = NSURL(string: CRUD.Configuration.defaultConfiguration.baseURL!)!
         let URLString = CRUD.URLBuilder().build(self.model, path: self.path)
-        var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix).URLByAppendingPathComponent(URLString))
+        var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix)!.URLByAppendingPathComponent(URLString)!)
         mutableURLRequest.HTTPMethod = method.rawValue
         mutableURLRequest = Alamofire.ParameterEncoding.URLEncodedInURL.encode(mutableURLRequest, parameters: query.pure).0
         mutableURLRequest = self.encoding.encode(mutableURLRequest, parameters: parameters.pure).0
@@ -228,7 +228,7 @@ public class CRAction<T: Record> {
         let URL = NSURL(string: CRUD.Configuration.defaultConfiguration.baseURL!)!
 //        let URLString = CRUD.URLBuilder().build(self.model, path: self.path)
         let URLString = ""
-        var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix).URLByAppendingPathComponent(URLString))
+        var mutableURLRequest = NSMutableURLRequest(URL: URL.URLByAppendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix)!.URLByAppendingPathComponent(URLString)!)
         mutableURLRequest.HTTPMethod = _method.rawValue
         mutableURLRequest = Alamofire.ParameterEncoding.URLEncodedInURL.encode(mutableURLRequest, parameters: _query.pure).0
         let map = Map(mappingType: .ToJSON, JSONDictionary: [:])
