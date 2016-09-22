@@ -20,7 +20,7 @@ class User: CRUDRecord {
     
     //MARK: -
     
-    func setAttributes(attributes: JSONObject) {
+    func setAttributes(_ attributes: JSONObject) {
         self.id = attributes["id"] as! String
         self.username = attributes["username"] as? String
     }
@@ -43,7 +43,7 @@ extension Author {
         
         //MARK: -
         
-        func setAttributes(attributes: JSONObject) {
+        func setAttributes(_ attributes: JSONObject) {
             self.id = attributes["id"] as! String
             self.text = attributes["text"] as! String
         }
