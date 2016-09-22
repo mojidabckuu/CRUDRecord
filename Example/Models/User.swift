@@ -10,8 +10,10 @@ import Foundation
 import CRUDRecord
 import Alamofire
 import ApplicationSupport
+import ObjectMapper
 
 class User: CRUDRecord {
+    public var timeline = ApplicationSupport.Timeline()
     
     var id: String!
     var username: String?
@@ -26,7 +28,12 @@ class User: CRUDRecord {
     }
     
     func getAttributes() -> JSONObject {
-        return ["id" : self.id, "username" : self.username ?? NSNull()]
+        return [:]
+//        return ["id" : self.id, "username" : self.username ?? NSNull()]
+    }
+    
+    func mapping(_ map: Map) {
+        
     }
 }
 
@@ -34,6 +41,8 @@ typealias Author = User
 
 extension Author {
     class Comment: CRUDRecord {
+        public var timeline = ApplicationSupport.Timeline()
+        
         var id: String!
         var text: String!
         
@@ -49,7 +58,12 @@ extension Author {
         }
         
         func getAttributes() -> JSONObject {
-            return ["id" : self.id, "text" : self.text]
+//            return ["id" : self.id, "text" : self.text]
+            return [:]
+        }
+        
+        func mapping(_ map: Map) {
+            
         }
     }
 }
