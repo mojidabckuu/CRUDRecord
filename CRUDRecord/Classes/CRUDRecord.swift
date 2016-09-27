@@ -14,7 +14,7 @@ import SwiftyBeaver
 
 let CRUDLog = SwiftyBeaver.self
 
-public typealias JSONObject = [String: AnyObject]
+public typealias JSONObject = [String: Any]
 public typealias JSONArray = [JSONObject]
 
 public protocol RecordResponse {
