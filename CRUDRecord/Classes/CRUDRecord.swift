@@ -33,6 +33,8 @@ public class Router: URLRequestConvertible {
     var model: Record?
     var modelType: Record.Type
     
+    var _path: String?
+    
     public init(_ model: Record, options: RecordObject = [:]) {
         self.model = model
         self.modelType = type(of: model)
@@ -54,6 +56,11 @@ public class Router: URLRequestConvertible {
         return self
     }
     
+    public func path(_ path: String) -> Router {
+        _path = path
+        return self
+    }
+    
     public func parameters(_ parameters: RecordObject) -> Router {
         self.parameters = parameters
         return self
@@ -72,7 +79,7 @@ public class Router: URLRequestConvertible {
     }
     
     public var path: String {
-        return (options["path"] as? String) ?? self.modelType.resourcesName + "/" + self.pattern
+        return _path ?? self.modelType.resourcesName + "/" + self.pattern
     }
     
     public func asURLRequest() throws -> URLRequest {
@@ -80,10 +87,7 @@ public class Router: URLRequestConvertible {
         let URLString = CRUD.URLBuilder().build(record: self.model, path: self.path)
         var request = URLRequest(url: (URL.appendingPathComponent(CRUD.Configuration.defaultConfiguration.prefix)?.appendingPathComponent(URLString))!)
         request.httpMethod = self.method.rawValue
-        
-//        mutableURLRequest = Alamofire.ParameterEncoding.URLEncodedInURL.encode(mutableURLRequest, parameters: query.pure).0
-//        mutableURLRequest = self.encoding.encode(mutableURLRequest, parameters: parameters.pure).0
-        return request
+        return (try? self.encoding.encode(request, with: self.parameters)) ?? request
     }
     
 }
@@ -157,6 +161,14 @@ public extension CRUDRecord {
     }
 }
 
+public extension Alamofire.Request {
+    @discardableResult
+    func debug() -> Self {
+        CRUDLog.info(self.debugDescription)
+        return self
+    }
+}
+
 public extension CRUDRecord {
     public static func debug(_ request: Alamofire.Request) -> Alamofire.Request {
         CRUDLog.info(request.debugDescription)
@@ -164,30 +176,30 @@ public extension CRUDRecord {
     }
     // MARK: - Predefined
 
-    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.post)).validate())
-    }
-    public func create(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(self.attributes).method(.post)).validate())
-    }
-    public func show(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes).method(.get)).validate())
-    }
-    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(Self.self, options: options).query(attributes.pure).method(.get)).validate())
-    }
-    public func index(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(self, options: options).method(.get)).validate())
-    }
-    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(self, options: options).parameters(attributes).method(.patch)).validate())
-    }
-    public func update(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes).method(.put)).validate())
-    }
-    public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
-        return Self.debug(Alamofire.request(Router(self, options: options).query(self.attributes).method(.delete)).validate())
-    }
+//    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.post)).validate())
+//    }
+//    public func create(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(self.attributes).method(.post)).validate())
+//    }
+//    public func show(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes).method(.get)).validate())
+//    }
+//    public static func index(attributes: JSONObject = [:], options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(Self.self, options: options).query(attributes.pure).method(.get)).validate())
+//    }
+//    public func index(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).method(.get)).validate())
+//    }
+//    public func patch(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).parameters(attributes).method(.patch)).validate())
+//    }
+//    public func update(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).parameters(self.attributes).method(.put)).validate())
+//    }
+//    public func delete(options: [String: Any] = [:]) -> Alamofire.Request {
+//        return Self.debug(Alamofire.request(Router(self, options: options).query(self.attributes).method(.delete)).validate())
+//    }
     
 //    public static func create(attributes: JSONObject, options: [String: Any] = [:]) -> Alamofire.Request {
 //        return Self.debug(Alamofire.request(Router(Self.self, options: options).parameters(attributes.pure).method(.post)))
