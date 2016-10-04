@@ -356,17 +356,14 @@ extension Alamofire.DataRequest {
         }
         return response(queue: queue, responseSerializer: seri, completionHandler: completionHandler)
     }
-//
-//    // Map utils
-//    public func map<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, context: MapContext? = nil, completionHandler: Response<[T], NSError> -> Void) -> Self {
-//        return self.responseArray(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
-//    }
-//
+
+    // Map utils
+    @discardableResult
+    public func map<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, _ completionHandler: @escaping (DataResponse<[T]>) -> Void) -> Self {
+        return self.responseArray(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
+    }
     @discardableResult
     public func map<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil, _ completionHandler: @escaping (DataResponse<T>) -> Void) -> Self {
         return self.responseObject(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
     }
-//    public func map<T: Record>(queue queue: dispatch_queue_t? = nil, keyPath: String? = nil, context: MapContext? = nil, object: T, completionHandler: Response<T, NSError> -> Void) -> Self {
-//        return self.responseObject(queue: queue, keyPath: keyPath, mapToObject: object, context: context, completionHandler: completionHandler)
-//    }
 }
