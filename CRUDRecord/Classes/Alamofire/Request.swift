@@ -366,4 +366,8 @@ extension Alamofire.DataRequest {
     public func map<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil, _ completionHandler: @escaping (DataResponse<T>) -> Void) -> Self {
         return self.responseObject(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
     }
+    @discardableResult
+    public func map<T: Record>(object: T, completionHandler: @escaping (DataResponse<T>) -> Void) -> Self {
+        return self.responseObject(queue: nil, keyPath: nil, mapToObject: object, mapper: nil, context: nil, completionHandler: completionHandler)
+    }
 }
