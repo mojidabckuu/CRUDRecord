@@ -79,7 +79,7 @@ public class Router: URLRequestConvertible {
     }
     
     public var path: String {
-        return _path ?? self.modelType.resourcesName + "/" + self.pattern
+        return _path ?? self.modelType.pathName + "/" + self.pattern
     }
     
     public func asURLRequest() throws -> URLRequest {
@@ -150,7 +150,7 @@ public enum CRUD {
 
 public protocol CRUDRecord: Record {}
 
-public extension CRUDRecord {
+public extension Record {
     public static var pathName: String {
         let components = self.modelName.components(separatedBy: ".").map({ $0.lowercased().pluralized })
         return components.dropLast().joined(separator: "/") + "/" + components.last!.lowercased()
