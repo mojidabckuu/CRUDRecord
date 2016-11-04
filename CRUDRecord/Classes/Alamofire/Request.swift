@@ -170,11 +170,11 @@ extension Alamofire.DataRequest {
             let JSONToMap: Any?
             if var keyPath = keyPath {
                 if keyPath.isEmpty {
-                    keyPath = T.resourceName.pluralized.lowercased()
+                    keyPath = T.className.pluralized.lowercased()
                 }
                 JSONToMap = OriginalJSONToMap?[keyPath]
             } else {
-                let resourceName = T.resourceName
+                let resourceName = T.className
                 JSONToMap = OriginalJSONToMap?[resourceName] ?? OriginalJSONToMap
             }
             
@@ -311,6 +311,9 @@ extension Alamofire.DataRequest {
     
     public func responseArray<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, completionHandler: @escaping (DataResponse<[T]>) -> Void) -> Self {
         let seri = DataArrayResponseSerializer { (request, response, data, error) -> Result<[T]> in
+            if let data = data {
+                print("👍" + (String(data: data, encoding: .utf8) ?? "Empty"))
+            }
             if let error = error {
                 return .failure(error)
             }
@@ -332,11 +335,12 @@ extension Alamofire.DataRequest {
                     if let object = json as? [String: Any] {
                         if var keyPath = keyPath {
                             if keyPath.isEmpty {
-                                keyPath = T.resourceName.pluralized.lowercased()
+                                keyPath = T.className.pluralized.lowercased()
                             }
                             OriginalJSONToMap = (object[keyPath] as? [[String: Any]]) ?? []
                         } else {
-                            let resourceName = T.resourceName.pluralized.lowercased()
+                            let resourceName = T.className.pluralized.lowercased()
+//                            let paths = [resourceName, T.modelName]
                             OriginalJSONToMap = (object[resourceName] as? [[String: Any]]) ?? object as? [[String: Any]] ?? []
                         }
                     } else {
