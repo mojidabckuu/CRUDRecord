@@ -131,7 +131,8 @@ extension Alamofire.DataRequest {
     
     static func handleErrors(data: Data?) -> Error? {
         if let data = data, let string = String(data: data, encoding: .utf8) {
-            var json = JSONParser(string).parse() as? [String: Any]
+            var json = (try? Jay().anyJsonFromData([UInt8](data))) as? [String: Any]
+//            var json = JSONParser(string).parse() as? [String: Any]
             if let errors = json?["errors"] as? [String: Any], !errors.isEmpty {
                 if let key = errors.keys.first, let errorInfo = errors[key] as? [[String: Any]], let message = errorInfo.first?["message"] as? String {
                     let info = [NSLocalizedDescriptionKey: message]
@@ -162,7 +163,8 @@ extension Alamofire.DataRequest {
             var OriginalJSONToMap: [String: Any]?
             if let data = data {
                 if let string = String(data: data, encoding: .utf8) {
-                    OriginalJSONToMap = JSONParser(string).parse() as? [String: Any]
+                    OriginalJSONToMap = (try? Jay().anyJsonFromData([UInt8](data))) as? [String: Any]
+//                    OriginalJSONToMap = JSONParser(string).parse() as? [String: Any]
                 }
             }
             CRUDLog.warning("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
@@ -221,7 +223,8 @@ extension Alamofire.DataRequest {
             var OriginalJSONToMap: [[String: Any]] = []
             if let data = data {
                 if let string = String(data: data, encoding: .utf8) {
-                    let json = JSONParser(string).parse()
+                    let json = (try? Jay().anyJsonFromData([UInt8](data)))
+//                    let json = JSONParser(string).parse()
                     if let object = json as? [String: Any] {
                         if var keyPath = keyPath {
                             if keyPath.isEmpty {
@@ -265,7 +268,8 @@ extension Alamofire.DataRequest {
             var OriginalJSONToMap: [[String: Any]] = []
             if let data = data {
                 if let string = String(data: data, encoding: .utf8) {
-                    let json = JSONParser(string).parse()
+//                    let json = JSONParser(string).parse()
+                    let json = (try? Jay().anyJsonFromData([UInt8](data)))
                     if let object = json as? [String: Any] {
                         if var keyPath = keyPath {
                             if keyPath.isEmpty {
@@ -331,7 +335,8 @@ extension Alamofire.DataRequest {
             var OriginalJSONToMap: [[String: Any]] = []
             if let data = data {
                 if let string = String(data: data, encoding: .utf8) {
-                    let json = JSONParser(string).parse()
+//                    let json = JSONParser(string).parse()
+                    let json = (try? Jay().anyJsonFromData([UInt8](data)))
                     if let object = json as? [String: Any] {
                         if var keyPath = keyPath {
                             if keyPath.isEmpty {
