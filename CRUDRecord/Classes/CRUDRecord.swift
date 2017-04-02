@@ -148,7 +148,7 @@ public enum CRUD {
     }
 }
 
-public protocol CRUDRecord: Record {}
+public protocol CRRecord: Record {}
 
 public extension Record {
     public static var pathName: String {
@@ -169,7 +169,7 @@ public extension Alamofire.Request {
     }
 }
 
-public extension CRUDRecord {
+public extension CRRecord {
     public static func debug(_ request: Alamofire.Request) -> Alamofire.Request {
         CRUDLog.info(request.debugDescription)
         return request

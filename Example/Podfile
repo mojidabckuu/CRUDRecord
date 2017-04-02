@@ -12,6 +12,7 @@ post_install do |installer|
 end
 
 target "CRUDRecord_Example" do
+    pod 'Alamofire', git: 'https://github.com/mojidabckuu/Alamofire', branch: 'model'
 	pod 'CRUDRecord', :path => '../'
     pod 'ObjectMapper', :path => '~/Documents/xcode/ObjectMapper'
     pod 'ApplicationSupport', :path => '~/Documents/xcode/ApplicationSupport'

@@ -7,376 +7,154 @@
 //
 
 import Foundation
-import Alamofire
-import ApplicationSupport
 import ObjectMapper
+import Alamofire
 
-public extension MultipartFormData {
-    func append(_ value: String, withName name: String) {
-        if let data = value.data(using: String.Encoding.utf8, allowLossyConversion: false) {
-            self.append(data, withName: name)
-        }
+// TODO: It applies only to json based responses
+open class Request {
+    public private(set) var request: Alamofire.Request
+    public private(set) var response: Alamofire.DataResponse<Any>?
+    
+    public init(_ request: Alamofire.Request) {
+        self.request = request
     }
     
-    func append<T: RawRepresentable>(_ value: T, withName name: String) {
-        if let value = value.rawValue as? String {
-            self.append(value, withName: name)
-        }
+    public init(_ urlRequestConvertible: URLRequestConvertible) {
+        self.request = SessionManager.current.request(urlRequestConvertible)
     }
-}
-
-extension Alamofire.Request {
-    public func debugLog() -> Self {
-        #if DEBUG
-            debugPrint(self)
-        #endif
+    
+    // TODO: How to rename it to `then`. It gives a ambiguous function call.
+    @discardableResult
+    public func next(_ completion: @escaping () -> ()) -> Request {
+        guard let response = self.response else {
+            completion()
+            return self
+        }
+        completion()
+        return self
+    }
+    
+    func ensureResponse(_ completion: @escaping ((DataResponse<Any>) -> (Void))) {
+        guard let response = self.response else {
+            self.request.JSON(completionHandler: { (response) in
+                self.response = response
+                completion(response)
+            })
+            return
+        }
+        completion(response)
+    }
+    
+    @discardableResult
+    public func `catch`(_ completion: @escaping (Error) -> ()) -> Self{
+        ensureResponse { response in
+            if let error = response.result.error {
+                completion(error)
+            }
+        }
         return self
     }
 }
 
-typealias ModelCompletion = ((DataResponse<Record.Type>) -> Void)
-typealias ModelsCompletion = ((DataResponse<Record.Type>) -> Void)
+open class _Request<T: Model>: Request {}
 
-extension Alamofire.Request {
-//    public static func JSONParseSerializer<Model: Record>(model: Model? = nil, options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<Model, NSError> {
-//        return ResponseSerializer { request, response, data, error in
-//            let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
-//            if CRUD.Configuration.defaultConfiguration.loggingEnabled {
-//                print("JSON: \(jsonResponse)")
-//            }
-//            guard let error = jsonResponse.error else {
-//                var model: Model = Model()
-//                if var item = jsonResponse.value as? JSONObject {
-//                    if CRUD.Configuration.defaultConfiguration.traitRoot {
-//                        let key = Model.resourceName.lowercaseString
-//                        item = (item[key] as? JSONObject) ?? item
-//                    }
-//                    model.attributes = item.pure
-//                }
-//                return .Success(model)
-//            }
-//            return .Failure(error)
-//        }
-//    }
-//    
-//    public static func JSONParseSerializer<Model: Record>(options options: NSJSONReadingOptions = .AllowFragments) -> ResponseSerializer<[Model], NSError> {
-//        return ResponseSerializer { request, response, data, error in
-//            let jsonResponse = JSONResponseSerializer().serializeResponse(request, response, data, error)
-//            if CRUD.Configuration.defaultConfiguration.loggingEnabled {
-//                print("JSON: \(jsonResponse)")
-//            }
-//            guard let error = jsonResponse.error else {
-//                var models: [Model] = []
-//                if let items = jsonResponse.value as? JSONArray {
-//                    models = items.map({ (json) -> Model in
-//                        var model = Model()
-//                        model.attributes = json.pure
-//                        return model
-//                    })
-//                } else if var item = jsonResponse.value as? JSONObject {
-//                    let key = Model.resourceName.pluralized.lowercaseString
-//                    if let items = item[key] as? JSONArray, CRUD.Configuration.defaultConfiguration.traitRoot {
-//                        models = items.map({ (json) -> Model in
-//                            var model = Model()
-//                            model.attributes = json.pure
-//                            return model
-//                        })
-//                    }
-//                }
-//                return .Success(models)
-//            }
-//            return .Failure(error)
-//        }
-//    }
+struct CRUDContent: MapContext {
+    var importantMappingInfo = "Info that I need during mapping"
 }
 
-extension Alamofire.Request {
+public class ModelsRequest<T: Model>: _Request<T> {
+    var _models: [T]?
     
-//    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: Response<[Model], NSError> -> Void) -> Self {
-//        if CRUD.Configuration.defaultConfiguration.loggingEnabled {
-//            
-//        }
-//        return self.response(queue: queue, responseSerializer: Alamofire.Request.JSONParseSerializer(options: options), completionHandler: completionHandler)
-//    }
-//    
-//    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, completionHandler: (Response<Model, NSError> -> Void)) -> Self {
-//        return self.response(queue: queue, responseSerializer: Alamofire.Request.JSONParseSerializer(options: options), completionHandler: completionHandler)
-//    }
-//    
-//    public func parseJSON<Model: Record>(queue queue: dispatch_queue_t? = nil, options: NSJSONReadingOptions = .AllowFragments, model: Model, completionHandler: (Response<Model, NSError> -> Void)) -> Self {
-//        return self.response(queue: queue, responseSerializer: Alamofire.Request.JSONParseSerializer(model, options: options), completionHandler: completionHandler)
-//    }
-}
-
-/// A generic `DataResponseSerializerType` used to serialize a request, response, and data into a serialized object.
-public struct DataArrayResponseSerializer<Value>: DataResponseSerializerProtocol {
-    /// The type of serialized object to be created by this `DataResponseSerializer`.
-    public typealias SerializedObject = [Value]
+    public var models: [T] { return _models ?? [] }
     
-    /// A closure used by response handlers that takes a request, response, data and error and returns a result.
-    public var serializeResponse: (URLRequest?, HTTPURLResponse?, Data?, Error?) -> Result<[Value]>
-    
-    /// Initializes the `ResponseSerializer` instance with the given serialize response closure.
-    ///
-    /// - parameter serializeResponse: The closure used to serialize the response.
-    ///
-    /// - returns: The new generic response serializer instance.
-    public init(serializeResponse: @escaping (URLRequest?, HTTPURLResponse?, Data?, Error?) -> Result<[Value]>) {
-        self.serializeResponse = serializeResponse
+    //Implementation
+    @discardableResult
+    public func then(_ completion: @escaping ([T]) -> ()) -> Self {
+        if let _ = _models {
+            completion(models)
+            return self
+        }
+        ensureResponse { response in
+            guard let value = response.result.value as? [String: Any] else {
+                // TODO: Add empty response error
+                return
+            }
+            
+            let name = T.modelName.pluralized.lowercased()
+            guard let data = value[name] as? [[String: Any]] else {
+                // TODO: Add empty response error
+                return
+            }
+            // TODO: Here it should be optional creation for the object in case when data is wrong
+            let models = data
+                .map { Map(mappingType: .fromJSON, JSONDictionary: $0, toObject: false, context: CRUDContent()) }
+                .map { map -> T in
+                    var model = T.init()
+                    model.mapping(map)
+                    return model
+            }
+            let unwrapped = Array(models)
+            self._models = unwrapped
+            completion(unwrapped)
+        }
+        return self
     }
 }
 
-
-extension Alamofire.DataRequest {
+open class ModelRequest<T: Model>: _Request<T> {
     
-    static func handleErrors(data: Data?) -> Error? {
-        if let data = data, let string = String(data: data, encoding: .utf8) {
-            var json = (try? Jay().anyJsonFromData([UInt8](data))) as? [String: Any]
-//            var json = JSONParser(string).parse() as? [String: Any]
-            if let errors = json?["errors"] as? [String: Any], !errors.isEmpty {
-                if let key = errors.keys.first, let errorInfo = errors[key] as? [[String: Any]], let message = errorInfo.first?["message"] as? String {
-                    let info = [NSLocalizedDescriptionKey: message]
-                    let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-                    return error
-                }
-            }
-        }
-        return nil
+    public private(set) var model: T?
+    
+    // MARK: - Lifecycle
+    public init(_ request: Alamofire.Request, model: T? = nil) {
+        super.init(request)
+        self.model = model
     }
     
-    public static func ObjectMapperSerializer<T: Record>(keyPath: String?, mapToObject object: T? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil) -> DataResponseSerializer<T> {
-        return DataResponseSerializer { request, response, data, error in
-            if let error = error {
-                return .failure(error)
-            }
-            
-            if let error = Alamofire.DataRequest.handleErrors(data: data) {
-                return .failure(error)
-            }
-            
-            guard let _ = data else {
-                let info = [NSLocalizedDescriptionKey: "Data could not be serialized. Input data was nil."]
-                let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-                return .failure(error)
-            }
-            
-            var OriginalJSONToMap: [String: Any]?
-            if let data = data {
-                if let string = String(data: data, encoding: .utf8) {
-                    OriginalJSONToMap = (try? Jay().anyJsonFromData([UInt8](data))) as? [String: Any]
-//                    OriginalJSONToMap = JSONParser(string).parse() as? [String: Any]
-                }
-            }
-            CRUDLog.warning("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
-            
-            let JSONToMap: Any?
-            if var keyPath = keyPath {
-                if keyPath.isEmpty {
-                    keyPath = T.className.pluralized.lowercased()
-                }
-                JSONToMap = OriginalJSONToMap?[keyPath]
-            } else {
-                let resourceName = T.className
-                JSONToMap = OriginalJSONToMap?[resourceName] ?? OriginalJSONToMap
-            }
-            
-            if let object = object {
-                Mapper<T>(context: context).map(JSONToMap, toObject: object)
-                return .success(object)
-            } else if let parsedObject = Mapper<T>(context: context).map(JSONToMap){
-                return .success(parsedObject)
-            }
-            
-            let info = [NSLocalizedDescriptionKey: "ObjectMapper failed to serialize response."]
-            let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-            return .failure(error)
-        }
+    public init(_ urlRequestConvertible: URLRequestConvertible, model: T? = nil) {
+        super.init(urlRequestConvertible)
+        self.model = model
     }
     
-    /**
-     Adds a handler to be called once the request has finished.
-     
-     - parameter queue:             The queue on which the completion handler is dispatched.
-     - parameter keyPath:           The key path where object mapping should be performed
-     - parameter object:            An object to perform the mapping on to
-     - parameter completionHandler: A closure to be executed once the request has finished and the data has been mapped by ObjectMapper.
-     
-     - returns: The request.
-     */
-    
-    public static func ObjectMapperArraySerializer<T: Record>(keyPath: String?, context: MapContext? = nil, mapper: MapOf<T>? = nil) -> DataResponseSerializer<[T]> {
-        return DataResponseSerializer(serializeResponse: { (request, response, data, error) -> Result<[T]> in
-            if let error = error {
-                return .failure(error)
-            }
-            
-            if let error = Alamofire.DataRequest.handleErrors(data: data) {
-                return .failure(error)
-            }
-            
-            guard let _ = data else {
-                let info = [NSLocalizedDescriptionKey: "Data could not be serialized. Input data was nil."]
-                let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-                return .failure(error)
-            }
-            
-            var OriginalJSONToMap: [[String: Any]] = []
-            if let data = data {
-                if let string = String(data: data, encoding: .utf8) {
-                    let json = (try? Jay().anyJsonFromData([UInt8](data)))
-//                    let json = JSONParser(string).parse()
-                    if let object = json as? [String: Any] {
-                        if var keyPath = keyPath {
-                            if keyPath.isEmpty {
-                                keyPath = T.resourceName.pluralized.lowercased()
-                            }
-                            OriginalJSONToMap = (object[keyPath] as? [[String: Any]]) ?? []
-                        } else {
-                            let resourceName = T.resourceName.pluralized.lowercased()
-                            OriginalJSONToMap = (object[resourceName] as? [[String: Any]]) ?? object as? [[String: Any]] ?? []
-                        }
-                    } else {
-                        OriginalJSONToMap = (json as? [[String: Any]]) ?? []
-                    }
-                }
-            }
-            CRUDLog.warning("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
-            
-            if let parsedObject = Mapper<T>(context: context).mapArray(OriginalJSONToMap){
-                return .success(parsedObject)
-            }
-            
-            let info = [NSLocalizedDescriptionKey: "ObjectMapper failed to serialize response."]
-            let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-            return .failure(error)
-        })
-        return DataResponseSerializer { request, response, data, error in
-            if let error = error {
-                return .failure(error)
-            }
-            
-            if let error = Alamofire.DataRequest.handleErrors(data: data) {
-                return .failure(error)
-            }
-            
-            guard let _ = data else {
-                let info = [NSLocalizedDescriptionKey: "Data could not be serialized. Input data was nil."]
-                let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-                return .failure(error)
-            }
-            
-            var OriginalJSONToMap: [[String: Any]] = []
-            if let data = data {
-                if let string = String(data: data, encoding: .utf8) {
-//                    let json = JSONParser(string).parse()
-                    let json = (try? Jay().anyJsonFromData([UInt8](data)))
-                    if let object = json as? [String: Any] {
-                        if var keyPath = keyPath {
-                            if keyPath.isEmpty {
-                                keyPath = T.resourceName.pluralized.lowercased()
-                            }
-                            OriginalJSONToMap = (object[keyPath] as? [[String: Any]]) ?? []
-                        } else {
-                            let resourceName = T.resourceName.pluralized.lowercased()
-                            OriginalJSONToMap = (object[resourceName] as? [[String: Any]]) ?? object as? [[String: Any]] ?? []
-                        }
-                    } else {
-                        OriginalJSONToMap = (json as? [[String: Any]]) ?? []
-                    }
-                }
-            }
-            CRUDLog.warning("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
-            
-            if let parsedObject = Mapper<T>(context: context).mapArray(OriginalJSONToMap){
-                return .success(parsedObject)
-            }
-            
-            let info = [NSLocalizedDescriptionKey: "ObjectMapper failed to serialize response."]
-            let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-            return .failure(error)
-        }
-    }
-    
-    public func responseObject<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, mapToObject object: T? = nil, mapper: MapOf<T>? = nil, context: MapContext? = nil, completionHandler: @escaping (DataResponse<T>) -> Void) -> Self {
-        let serializer = Alamofire.DataRequest.ObjectMapperSerializer(keyPath: keyPath, mapToObject: object, context: context)
-        return response(queue: queue, responseSerializer: serializer, completionHandler: completionHandler)
-    }
-    
-    /**
-     Adds a handler to be called once the request has finished.
-     
-     - parameter queue: The queue on which the completion handler is dispatched.
-     - parameter keyPath: The key path where object mapping should be performed
-     - parameter completionHandler: A closure to be executed once the request has finished and the data has been mapped by ObjectMapper.
-     
-     - returns: The request.
-     */
-    
-    
-    public func responseArray<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, completionHandler: @escaping (DataResponse<[T]>) -> Void) -> Self {
-        let seri = DataArrayResponseSerializer { (request, response, data, error) -> Result<[T]> in
-            if let data = data {
-                print("👍" + (String(data: data, encoding: .utf8) ?? "Empty"))
-            }
-            if let error = error {
-                return .failure(error)
-            }
-            
-            if let error = Alamofire.DataRequest.handleErrors(data: data) {
-                return .failure(error)
-            }
-            
-            guard let _ = data else {
-                let info = [NSLocalizedDescriptionKey: "Data could not be serialized. Input data was nil."]
-                let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-                return .failure(error)
-            }
-            
-            var OriginalJSONToMap: [[String: Any]] = []
-            if let data = data {
-                if let string = String(data: data, encoding: .utf8) {
-//                    let json = JSONParser(string).parse()
-                    let json = (try? Jay().anyJsonFromData([UInt8](data)))
-                    if let object = json as? [String: Any] {
-                        if var keyPath = keyPath {
-                            if keyPath.isEmpty {
-                                keyPath = T.className.pluralized.lowercased()
-                            }
-                            OriginalJSONToMap = (object[keyPath] as? [[String: Any]]) ?? []
-                        } else {
-                            let resourceName = T.className.pluralized.lowercased()
-//                            let paths = [resourceName, T.modelName]
-                            OriginalJSONToMap = (object[resourceName] as? [[String: Any]]) ?? object as? [[String: Any]] ?? []
-                        }
-                    } else {
-                        OriginalJSONToMap = (json as? [[String: Any]]) ?? []
-                    }
-                }
-            }
-            CRUDLog.warning("Response: \(response?.statusCode) : \n" + "\(OriginalJSONToMap)")
-            
-            if let parsedObject = Mapper<T>(context: context).mapArray(OriginalJSONToMap){
-                return .success(parsedObject)
-            }
-            
-            let info = [NSLocalizedDescriptionKey: "ObjectMapper failed to serialize response."]
-            let error = NSError(domain: "com.json.ahahah", code: 0, userInfo: info)
-            return .failure(error)
-        }
-        return response(queue: queue, responseSerializer: seri, completionHandler: completionHandler)
-    }
-
-    // Map utils
+    // MARK: - Implementation
     @discardableResult
-    public func map<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, _ completionHandler: @escaping (DataResponse<[T]>) -> Void) -> Self {
-        return self.responseArray(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
+    public func then(_ completion: @escaping (T) -> ()) -> Self {
+        if let model = self.model {
+            return flush(completion)
+        } else {
+            return obtain(completion)
+        }
     }
+    
+    //Flush to existing
     @discardableResult
-    public func map<T: Record>(queue queue: DispatchQueue? = nil, keyPath: String? = nil, context: MapContext? = nil, mapper: MapOf<T>? = nil, _ completionHandler: @escaping (DataResponse<T>) -> Void) -> Self {
-        return self.responseObject(queue: queue, keyPath: keyPath, context: context, completionHandler: completionHandler)
+    public func flush(_ completion: @escaping (T) -> ()) -> Self {
+        return _flush(model: self.model!, completion: completion)
     }
+    
+    //Obtain single object
     @discardableResult
-    public func map<T: Record>(object: T, completionHandler: @escaping (DataResponse<T>) -> Void) -> Self {
-        return self.responseObject(queue: nil, keyPath: nil, mapToObject: object, mapper: nil, context: nil, completionHandler: completionHandler)
+    public func obtain(_ completion: @escaping (T) -> ()) -> Self {
+        return _flush(model: T(), completion: completion)
+    }
+    
+    private func _flush(model: T, completion: @escaping (T) -> ()) -> Self {
+        ensureResponse { response in
+            guard let value = response.result.value as? [String: Any] else {
+                // TODO: Add empty response error
+                return
+            }
+            let name = T.modelName.lowercased()
+            guard let data = value[name] as? [String: Any] else {
+                // TODO: Add empty response error
+                return
+            }
+            let map = Map(mappingType: .fromJSON, JSONDictionary: data, toObject: true, context: CRUDContent())
+            var model = model
+            model.mapping(map)
+            self.model = model
+            completion(model)
+        }
+        return self
     }
 }

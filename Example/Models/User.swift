@@ -12,7 +12,7 @@ import Alamofire
 import ApplicationSupport
 import ObjectMapper
 
-class User: CRUDRecord {
+class User: CRUDRecord.CRRecord {
     public var timeline = ApplicationSupport.Timeline()
     
     var id: String!
@@ -40,7 +40,7 @@ class User: CRUDRecord {
 typealias Author = User
 
 extension Author {
-    class Comment: CRUDRecord {
+    class Comment: CRUDRecord.CRRecord {
         public var timeline = ApplicationSupport.Timeline()
         
         var id: String!

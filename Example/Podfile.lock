@@ -1,7 +1,7 @@
 PODS:
-  - Alamofire (4.0.0)
+  - Alamofire (4.0.1)
   - ApplicationSupport (1.0.0):
-    - ObjectMapper (~> 1.3)
+    - ObjectMapper
     - SwiftyBeaver
   - CRUDRecord (0.1.0):
     - Alamofire (~> 4.0)
@@ -10,25 +10,34 @@ PODS:
   - SwiftyBeaver (1.0.3)
 
 DEPENDENCIES:
+  - Alamofire (from `https://github.com/mojidabckuu/Alamofire`, branch `model`)
   - ApplicationSupport (from `~/Documents/xcode/ApplicationSupport`)
   - CRUDRecord (from `../`)
   - ObjectMapper (from `~/Documents/xcode/ObjectMapper`)
 
 EXTERNAL SOURCES:
+  Alamofire:
+    :branch: model
+    :git: https://github.com/mojidabckuu/Alamofire
   ApplicationSupport:
-    :path: ~/Documents/xcode/ApplicationSupport
+    :path: "~/Documents/xcode/ApplicationSupport"
   CRUDRecord:
-    :path: ../
+    :path: "../"
   ObjectMapper:
-    :path: ~/Documents/xcode/ObjectMapper
+    :path: "~/Documents/xcode/ObjectMapper"
+
+CHECKOUT OPTIONS:
+  Alamofire:
+    :commit: 907b2535872f26ef2d1f5e5cacc68dfe1f560436
+    :git: https://github.com/mojidabckuu/Alamofire
 
 SPEC CHECKSUMS:
-  Alamofire: fef59f00388f267e52d9b432aa5d93dc97190f14
-  ApplicationSupport: 1ce814a6a127f1a9566904cd75d603a8d61b1185
+  Alamofire: 6b5fcadb9ced536db37d76109066fb6848eb20be
+  ApplicationSupport: 3d4b8c3f4061c6101688d690539195b2ed3ff778
   CRUDRecord: 8f871439641676001b5b0ac76ca2c3f66c070e09
   ObjectMapper: a07ad0462c5adf014adc0f89ef04c29b626e855e
   SwiftyBeaver: e42a664ffbdb5ec68ce968ffd3c54f619c92e0d7
 
-PODFILE CHECKSUM: 80220b3192d2f01f55019bde54c828727cb83b78
+PODFILE CHECKSUM: 26bdbb4a1cf617ac954ef9cf8b43bcace66016c4
 
-COCOAPODS: 1.0.1
+COCOAPODS: 1.2.0
