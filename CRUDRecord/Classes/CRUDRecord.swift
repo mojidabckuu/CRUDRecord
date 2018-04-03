@@ -134,7 +134,7 @@ public enum CRUD {
             let regex = try? NSRegularExpression(pattern: self.pattern, options: NSRegularExpression.Options.caseInsensitive)
             let range = NSRange(location: 0, length: path.characters.count)
             let attributes = record?.attributes ?? [:]
-            var replacedString = String(path)!
+            var replacedString = String(path)
             if let matches = regex?.matches(in: path, options: NSRegularExpression.MatchingOptions.reportProgress, range: range) {
                 for match in matches {
                     let pat = (path as NSString).substring(with: match.range) as NSString
